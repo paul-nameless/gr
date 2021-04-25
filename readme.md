@@ -2,8 +2,6 @@
 
 Gerrit's command line tool
 
-This tools is very basic but it does all what I need at the moment (though I am happy to accept PRs)
-
 ![gr screenshot](screenshot.png)
 
 ## Installation
@@ -14,9 +12,9 @@ pip3 install gr-cli
 
 ## Auth
 
-At the moment the only way it works is by `HTTP credentials` auth: [https://gerrit.cloudlinux.com/settings/#HTTPCredentials](https://gerrit.cloudlinux.com/settings/#HTTPCredentials)
+Authentication done by `HTTP credentials`: [https://gerrit.cloudlinux.com/settings/#HTTPCredentials](https://gerrit.cloudlinux.com/settings/#HTTPCredentials)
 
-At first launch, `gr` will ask for user and password that you generated at bitbucket and write to `~/.config/gr/conf.py`. That's plain python file and you can use it to store information securely:
+At first launch, `gr` will ask for username and password that you generated at gerrit and write to `~/.config/gr/conf.py`. That's plain python file and you can use it however you want, e.g.:
 
 ```python
 import os

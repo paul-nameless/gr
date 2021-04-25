@@ -10,9 +10,8 @@ base_url = f"https://{get_hostname()}/a"
 
 @app.command()
 def list(
-        query: str = "state:active",
-        limit: int = 10,
-
+    query: str = "state:active",
+    limit: int = 10,
 ):
     """List projects by query"""
     repo_url = f"{base_url}/projects/"

@@ -36,6 +36,6 @@ case $ARG in
         ;;
 
     *)
-        poetry run python3 main.py
+        poetry run python3 gr/main.py
         ;;
 esac

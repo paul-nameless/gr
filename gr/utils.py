@@ -20,8 +20,10 @@ def get(url, query: dict = None):
         exit(1)
     return json.loads(resp.text.split("\n", 1)[-1])
 
+
 def get_text(url, query: dict = None):
     return requests.get(url, auth=config.AUTH, params=query).text
+
 
 def post(url: str, data: dict = None):
     resp = requests.post(url, auth=config.AUTH, json=data)
@@ -37,7 +39,6 @@ def put(url: str, data: dict = None):
         print("Error response:", resp.text)
         exit(1)
     return json.loads(resp.text.split("\n", 1)[-1])
-
 
 
 def handle_error(resp: dict):
@@ -59,7 +60,7 @@ def run_cmd(cmd: list, shell=False):
         cwd=os.getenv("PWD"),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=shell
+        shell=shell,
     )
     if proc.returncode != 0:
         print(f"{cmd} exited with {proc.returncode} code")
@@ -75,7 +76,6 @@ def get_remote():
 
 def get_hostname():
     return urlparse(get_remote()).hostname
-
 
 
 def get_current_branch():

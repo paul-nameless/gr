@@ -18,7 +18,7 @@ else:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     print(
-        "Enter bitbucket app user and password (https://bitbucket.org/account/settings/app-passwords/):"
+        "Enter Gerrit's HTTP credentials (https://gerrit.cloudlinux.com/settings/#HTTPCredentials):"
     )
     user = input("user> ")
     pswd = input("pswd> ")

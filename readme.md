@@ -2,6 +2,8 @@
 
 Gerrit's command line tool
 
+> It's like `gh` ([GitHub's CLI](https://github.com/cli/cli)) but for Gerrit
+
 ![gr screenshot](screenshot.png)
 
 ## Installation

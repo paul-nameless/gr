@@ -30,6 +30,8 @@ def post(url: str, data: dict = None):
     if not resp.ok:
         print("Error response:", resp.text)
         exit(1)
+    if not resp.text:
+        return None
     return json.loads(resp.text.split("\n", 1)[-1])
 
 

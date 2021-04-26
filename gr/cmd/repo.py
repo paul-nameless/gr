@@ -1,5 +1,5 @@
 import typer
-from gr.utils import get, get_hostname, pp
+from gr.utils import get, get_hostname
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -16,7 +16,7 @@ def list(
     """List projects by query"""
     repo_url = f"{base_url}/projects/"
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(repo_url, {"query": query, "limit": limit})
         table = generate_repo_table(resp)
     console.print(table)

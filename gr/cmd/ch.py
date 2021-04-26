@@ -1,31 +1,18 @@
 import base64
-import json
-from enum import Enum, auto
+from enum import Enum
+from functools import lru_cache
 from typing import List, Optional
 
 import typer
-from dateutil.parser import parse
 from gr import config
-from gr.utils import (
-    get,
-    get_current_branch,
-    get_hostname,
-    get_text,
-    handle_error,
-    parse_dt,
-    post,
-    pp,
-    put,
-    run_cmd,
-)
+from gr.utils import get, get_hostname, get_text, parse_dt, post, run_cmd
 from rich import box
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.padding import Padding
 from rich.syntax import Syntax
 from rich.table import Table
 
-app = typer.Typer(help="Manage pull requests")
+app = typer.Typer(help="Manage changes")
 
 base_url = f"https://{get_hostname()}/a"
 changes_url = f"{base_url}/changes/"
@@ -40,9 +27,6 @@ def strip(_str, max_len=32):
     return _str if len(_str) < max_len else f"{_str[:max_len-3]}..."
 
 
-from functools import lru_cache
-
-
 @lru_cache(maxsize=1024)
 def get_name(account_id: int):
     # TODO: cache in files, create decorator for file cache
@@ -52,14 +36,14 @@ def get_name(account_id: int):
 @app.command()
 def list(
     q: str = "is:open (reviewer:self OR owner:self)",
-    limit: int = 10,
+    limit: int = 16,
     self: bool = False,
 ):
     """List all CHanges"""
     if self:
         q = "is:open owner:self"
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(changes_url, {"q": q, "n": limit, "o": "DETAILED_LABELS"})
         table = generate_changes_table(resp)
     console.print(table)
@@ -80,17 +64,35 @@ def generate_changes_table(changes: List[dict]) -> Table:
         "V",
     ]
     for column in columns:
+        no_wrap = True
+        overflow = "fold"
+        if column == "Subject":
+            overflow = "ellipsis"
+            no_wrap = False
+
         table.add_column(
             column,
             justify="left",
             style="cyan",
-            no_wrap=True,
+            no_wrap=no_wrap,
+            overflow=overflow,
         )
 
     for change in changes:
         updated = parse_dt(change["updated"])
-        subject = strip(change["subject"], 32)
-        status = "-" if change["mergeable"] else "[red]Merge Conflict[/red]"
+        subject = strip(change["subject"], 64)
+        if "mergeable" not in change:
+            status = f"[green]{change['status'].title()}[/green] "
+        else:
+            status = (
+                "[cyan]Active[/cyan] "
+                if change.get("mergeable", True)
+                else "[red]Merge Conflict[/red] "
+            )
+
+        status = (
+            "-" if change.get("mergeable") else "[red]Merge Conflict[/red]"
+        )
         owner = get_name(change["owner"]["_account_id"])
         project = change["project"]
         branch = strip(change["branch"])
@@ -102,9 +104,9 @@ def generate_changes_table(changes: List[dict]) -> Table:
         ]
         verified = ""
         if any(it for it in verified_values if it < 0):
-            verified = f"[red]X[/red]"
+            verified = "[red]X[/red]"
         elif any(it for it in verified_values if it > 0):
-            verified = f"[green]V[/green]"
+            verified = "[green]V[/green]"
 
         values = [
             it["value"]
@@ -140,6 +142,7 @@ def merge(
 ):
     """Submit change by ID"""
     if force:
+        url = review_url.format(id=id, revision_id="current")
         post(url, {"labels": {"Code-Review": "+2"}})
     url = submit_url.format(id=id)
     resp = post(url)
@@ -160,7 +163,7 @@ def diff(
     """Show diff by change ID"""
     diff_url = f"{base_url}/changes/{id}/revisions/{revision_id}/patch"
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         diff = base64.b64decode(get_text(diff_url))
         syntax = Syntax(
             diff, "diff", theme=config.THEME, background_color=config.BG_COLOR
@@ -174,7 +177,7 @@ def checkout(
 ):
     """Checkout change to new branch"""
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(
             changes_url
             + f"?q=change:{id}&o=DOWNLOAD_COMMANDS&o=CURRENT_REVISION",
@@ -205,7 +208,7 @@ def review(
     url = review_url.format(id=id, revision_id=revision_id)
     data = {"labels": {"Code-Review": cr}}
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = post(url, data)
     cr = resp["labels"]["Code-Review"]
     print(f"Code-Review {cr:+}")
@@ -225,8 +228,8 @@ def comment(
         data["labels"] = {"Code-Review": cr}
 
     console = Console()
-    with console.status("[bold green]Loading...") as status:
-        resp = post(url, data)
+    with console.status("[bold green]Loading..."):
+        post(url, data)
 
 
 @app.command()
@@ -236,7 +239,7 @@ def comments(
     """List change comments by ID"""
     url = comments_url.format(id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(url)
     for filepath, comments in resp.items():
         console.print(f"[bold]{filepath}[/bold]")
@@ -247,7 +250,10 @@ def comments(
             line = comment["line"]
             msg = comment["message"]
             console.print(
-                f"    [bold]Patchset {patch_set}, Line {line}[/bold] {msg}"
+                Padding(
+                    f"[cyan bold]{user}[/cyan bold]\n[bold]Patchset {patch_set}, Line {line}[/bold] {msg}\n",
+                    (0, 1),
+                )
             )
 
 
@@ -259,7 +265,7 @@ def abandon(
     abandon_url = f"{base_url}/changes/{id}/abandon"
     url = abandon_url.format(id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = post(url)
     print(resp["status"].title())
 
@@ -272,8 +278,8 @@ def rebase(
     rebase_url = f"{base_url}/changes/{id}/rebase"
     url = rebase_url.format(id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
-        resp = post(url)
+    with console.status("[bold green]Loading..."):
+        post(url)
     print("Rebased")
 
 
@@ -282,7 +288,7 @@ def view(id: str, limit: int = 4):
     """View change comments and details"""
     detail_url = f"{base_url}/changes/{id}/detail"
     console = Console()
-    with console.status("[bold green]Loading...") as status:
+    with console.status("[bold green]Loading..."):
         resp = get(detail_url)
     if "mergeable" not in resp:
         status = f"[green]{resp['status'].title()}[/green] "
@@ -360,16 +366,30 @@ def view(id: str, limit: int = 4):
 
 
 @app.command()
-def add_reviewers(id: str, users: List[str]):
-    """Abandon change by ID"""
-    add_reviewers_url = f"{base_url}/changes/{id}/reviewers"
-    url = add_reviewers_url.format(id=id)
+def add_review(id: str, accounts: List[str]):
+    """Add revviewer to the change"""
+    add_review_url = f"{base_url}/changes/{id}/reviewers"
+    url = add_review_url.format(id=id)
     console = Console()
-    with console.status("[bold green]Loading...") as status:
-        for user in users:
-            resp = post(url, {"reviewer": user})
+    with console.status("[bold green]Loading..."):
+        for user in accounts:
+            post(url, {"reviewer": user})
 
     print("Added")
+
+
+@app.command()
+def del_review(id: str, accounts: List[str]):
+    """Delete revviewer from the change"""
+    console = Console()
+    with console.status("[bold green]Loading..."):
+        for account_id in accounts:
+            del_review_url = (
+                f"{base_url}/changes/{id}/reviewers/{account_id}/delete"
+            )
+            post(del_review_url, {"notify": "NONE"})
+
+    print("Deleted")
 
 
 @app.command()

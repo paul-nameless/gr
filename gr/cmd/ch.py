@@ -143,7 +143,7 @@ def merge(
     """Submit change by ID"""
     if force:
         url = review_url.format(id=id, revision_id="current")
-        post(url, {"labels": {"Code-Review": "+2"}})
+        post(url, {"labels": {"Code-Review": "+2", "Verified": "+1"}})
     url = submit_url.format(id=id)
     resp = post(url)
     print(resp["status"].title())

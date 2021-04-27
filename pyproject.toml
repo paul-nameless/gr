@@ -5,6 +5,9 @@ description = "Gerrit's command line tool"
 authors = ["Paul Nameless <reacsdas@gmail.com>"]
 license = "Unlicense"
 packages = [{ include = "gr"}]
+readme = "readme.md"
+homepage = "https://github.com/paul-nameless/gr"
+repository = "https://github.com/paul-nameless/gr"
 
 [tool.poetry.dependencies]
 python = "^3.9"
